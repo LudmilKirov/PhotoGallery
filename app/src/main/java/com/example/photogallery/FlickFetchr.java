@@ -1,10 +1,19 @@
 package com.example.photogallery;
 
+import android.net.Uri;
+import android.util.Log;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 public class FlickFetchr {
 
@@ -29,6 +38,10 @@ public class FlickFetchr {
     //While getUrlBytes(String) does the heavy lifting,
     // getUrlString(string) is what you will actually use.
     //It converts the bytes fetched by getUrlBytes into a string.
+    private static final String TAG = "FlickrFetcher";
+    private static final String API_KEY = "2b6cecd8716c5bd9223472062dbe3980";
+
+
     public byte[] getUrlBytes(String urlSpec) throws IOException {
         URL url = new URL(urlSpec);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -43,18 +56,72 @@ public class FlickFetchr {
 
             int bytesRead = 0;
             byte[] buffer = new byte[1024];
-            while ((bytesRead = in.read(buffer)) > 0){
-                out.write(buffer,0,bytesRead);
+            while ((bytesRead = in.read(buffer)) > 0) {
+                out.write(buffer, 0, bytesRead);
             }
 
             out.close();
             return out.toByteArray();
-        }finally {
+        } finally {
             connection.disconnect();
         }
     }
 
-    public String getUrlString(String urlSpec) throws IOException{
+    public String getUrlString(String urlSpec) throws IOException {
         return new String(getUrlBytes(urlSpec));
+    }
+
+    //Using Uri builder to build the complete URl for Flickr API request.URI.
+    // Builder is a convenience class for creating properly escaped parameterized URLs.
+    public  List<GalleryItems> fetchItems(){
+
+        List<GalleryItems> items = new ArrayList<>();
+        try{
+            String url = Uri.parse("https://api.flickr.com/services/rest/")
+                    .buildUpon()
+                    .appendQueryParameter("method","flickr.photos.getRecent")
+                    .appendQueryParameter("api_key",API_KEY)
+                    .appendQueryParameter("format","json")
+                    .appendQueryParameter("nojsoncallback","1")
+                    //For small version of the pictures if it is available
+                    .appendQueryParameter("extras","url_s")
+                    .build().toString();
+
+            String jsonString = getUrlString(url);
+            Log.i(TAG,"Received JSON: "+ jsonString);
+            JSONObject jsonObject = new JSONObject(jsonString);
+            parseItems(items,jsonObject);
+        }catch (IOException ioe){
+            Log.e(TAG,"Failed to fetch items",ioe);
+        } catch (JSONException e) {
+            Log.e(TAG,"Failed to parse JSON",e);
+        }
+
+        return items;
+    }
+
+    //Pull a information for each photo.
+    // Make a GalleryItems for each photo and add it to a List
+    private void parseItems(List<GalleryItems> items,JSONObject jsonBody)
+            throws IOException,JSONException{
+
+        JSONObject photosJsonObjects = jsonBody.getJSONObject("photos");
+        JSONArray photoJsonArray=photosJsonObjects.getJSONArray("photo");
+
+        for (int i = 0; i < photoJsonArray.length() ; i++) {
+            JSONObject photoJsonObject = photoJsonArray.getJSONObject(i);
+
+            GalleryItems item = new GalleryItems();
+            item.setId(photoJsonObject.getString("id"));
+            item.setCaption(photoJsonObject.getString("title"));
+
+            //Not every Flick image return url_s so have to check
+            if(!photoJsonObject.has("url_s")){
+                continue;
+            }
+
+            item.setURl(photoJsonObject.getString("url_s"));
+            items.add(item);
+        }
     }
 }
