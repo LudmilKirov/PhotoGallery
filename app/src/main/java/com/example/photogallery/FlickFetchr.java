@@ -3,6 +3,10 @@ package com.example.photogallery;
 import android.net.Uri;
 import android.util.Log;
 
+import com.google.gson.FieldNamingStrategy;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -10,6 +14,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -73,28 +78,28 @@ public class FlickFetchr {
 
     //Using Uri builder to build the complete URl for Flickr API request.URI.
     // Builder is a convenience class for creating properly escaped parameterized URLs.
-    public  List<GalleryItems> fetchItems(){
+    public List<GalleryItems> fetchItems() {
 
         List<GalleryItems> items = new ArrayList<>();
-        try{
+        try {
             String url = Uri.parse("https://api.flickr.com/services/rest/")
                     .buildUpon()
-                    .appendQueryParameter("method","flickr.photos.getRecent")
-                    .appendQueryParameter("api_key",API_KEY)
-                    .appendQueryParameter("format","json")
-                    .appendQueryParameter("nojsoncallback","1")
+                    .appendQueryParameter("method", "flickr.photos.getRecent")
+                    .appendQueryParameter("api_key", API_KEY)
+                    .appendQueryParameter("format", "json")
+                    .appendQueryParameter("nojsoncallback", "1")
                     //For small version of the pictures if it is available
-                    .appendQueryParameter("extras","url_s")
+                    .appendQueryParameter("extras", "url_s")
                     .build().toString();
 
             String jsonString = getUrlString(url);
-            Log.i(TAG,"Received JSON: "+ jsonString);
+            Log.i(TAG, "Received JSON: " + jsonString);
             JSONObject jsonObject = new JSONObject(jsonString);
-            parseItems(items,jsonObject);
-        }catch (IOException ioe){
-            Log.e(TAG,"Failed to fetch items",ioe);
+            parseItems(items, jsonObject);
+        } catch (IOException ioe) {
+            Log.e(TAG, "Failed to fetch items", ioe);
         } catch (JSONException e) {
-            Log.e(TAG,"Failed to parse JSON",e);
+            Log.e(TAG, "Failed to parse JSON", e);
         }
 
         return items;
@@ -102,26 +107,56 @@ public class FlickFetchr {
 
     //Pull a information for each photo.
     // Make a GalleryItems for each photo and add it to a List
-    private void parseItems(List<GalleryItems> items,JSONObject jsonBody)
-            throws IOException,JSONException{
+    private void parseItems(List<GalleryItems> items, JSONObject jsonBody)
+            throws IOException, JSONException {
 
-        JSONObject photosJsonObjects = jsonBody.getJSONObject("photos");
-        JSONArray photoJsonArray=photosJsonObjects.getJSONArray("photo");
-
-        for (int i = 0; i < photoJsonArray.length() ; i++) {
-            JSONObject photoJsonObject = photoJsonArray.getJSONObject(i);
-
-            GalleryItems item = new GalleryItems();
-            item.setId(photoJsonObject.getString("id"));
-            item.setCaption(photoJsonObject.getString("title"));
-
-            //Not every Flick image return url_s so have to check
-            if(!photoJsonObject.has("url_s")){
-                continue;
+        //Using the GSON
+        GsonBuilder builder = new GsonBuilder();
+        builder.setFieldNamingStrategy(new FieldNamingStrategy() {
+            @Override
+            public String translateName(Field f) {
+                if (f.getName().equals("mId")) {
+                    return "id";
+                } else if (f.getName().equals("mCaption")) {
+                    return "title";
+                } else if (f.getName().equals("mUrl")) {
+                    return "url_s";
+                } else {
+                    return f.getName();
+                }
             }
+        });
 
-            item.setURl(photoJsonObject.getString("url_s"));
+        Gson gson = builder.create();
+
+        JSONObject photosJsonObject = jsonBody.getJSONObject("photos");
+        JSONArray photoJsonArray = photosJsonObject.getJSONArray("photo");
+
+
+        for (int i = 0; i < photoJsonArray.length(); i++) {
+            JSONObject photoJsonObject = photoJsonArray.getJSONObject(i);
+            GalleryItems item = gson.fromJson(photoJsonObject.toString(), GalleryItems.class);
             items.add(item);
         }
     }
 }
+//Before the use of Gson
+//
+//        for (int i = 0; i < photoJsonArray.length() ; i++) {
+//            JSONObject photoJsonObject = photoJsonArray.getJSONObject(i);
+//
+//            GalleryItems item = new GalleryItems();
+//            item.setId(photoJsonObject.getString("id"));
+//            item.setCaption(photoJsonObject.getString("title"));
+//
+//            //Not every Flick image return url_s so have to check
+//            if(!photoJsonObject.has("url_s")){
+//                continue;
+//            }
+//
+//            item.setURl(photoJsonObject.getString("url_s"));
+//            items.add(item);
+//        }
+//    }
+
+
