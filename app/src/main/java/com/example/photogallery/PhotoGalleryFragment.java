@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -14,11 +15,14 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PhotoGalleryFragment extends Fragment {
     private static final String TAG = "PhotoGalleryFragment";
 
     private RecyclerView mPhotoRecyclerView;
+    private List<GalleryItems> mItems = new ArrayList<>();
 
 
     @Override
@@ -33,29 +37,85 @@ public class PhotoGalleryFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater,
                              @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        View v = inflater.inflate(R.layout.fragment_photo_galley,container,false);
+        View v = inflater.inflate(R.layout.fragment_photo_galley, container, false);
 
-        mPhotoRecyclerView = (RecyclerView)v.findViewById(R.id.fragment_photo_gallery_recycler_view);
-        mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(),3));
+        mPhotoRecyclerView = (RecyclerView) v.findViewById(R.id.fragment_photo_gallery_recycler_view);
+        mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
+
+        //Every time a new RecyclerView is created it is
+        // reconfigured with an appropriate adapter
+        setupAdapter();
 
         return v;
     }
 
-    public static PhotoGalleryFragment newInstance(){
+    //Look the current model state,namely the List of GalleryItems
+    // and configures the adapter appropriately on your RecyclerView.
+    private void setupAdapter() {
+        //This confirms that the fragment has been attached
+        // an activity,and in turn that getActivity() will not be null
+        if (isAdded()) {
+            mPhotoRecyclerView.setAdapter(new PhotoAdapter(mItems));
+        }
+    }
+
+    public static PhotoGalleryFragment newInstance() {
         return new PhotoGalleryFragment();
     }
 
-    private class FetchItemsTask extends AsyncTask<Void,Void,Void>{
+    private class PhotoHolder extends RecyclerView.ViewHolder {
+
+        private final TextView mTitleTextView;
+
+        public PhotoHolder(@NonNull View itemView) {
+            super(itemView);
+            mTitleTextView = (TextView) itemView;
+        }
+
+        public void bindGalleryItem(GalleryItems items) {
+            mTitleTextView.setText(items.toString());
+        }
+    }
+
+    private class PhotoAdapter extends RecyclerView.Adapter<PhotoHolder> {
+
+        private List<GalleryItems> mGalleryItems;
+
+        public PhotoAdapter(List<GalleryItems> galleryItems) {
+            mGalleryItems = galleryItems;
+        }
+
+        @NonNull
         @Override
-        protected Void doInBackground(Void... voids) {
-            try{
-                String result = new FlickFetchr()
-                        .getUrlString("http://www.bignerdranch.com");
-                Log.i(TAG,"Fetched contents of url :"+result);
-            }catch (IOException ieo){
-                Log.e(TAG,"Failed to fetch url:",ieo);
-            }
-            return null;
+        public PhotoHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int viewType) {
+            TextView textView = new TextView(getActivity());
+            return new PhotoHolder(textView);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull PhotoHolder holder, int position) {
+            GalleryItems galleryItems = mGalleryItems.get(position);
+            holder.bindGalleryItem(galleryItems);
+
+        }
+
+        @Override
+        public int getItemCount() {
+            return mGalleryItems.size();
+        }
+    }
+
+    private class FetchItemsTask extends AsyncTask<Void, Void, List<GalleryItems>> {
+        @Override
+        protected List<GalleryItems> doInBackground(Void... voids) {
+            new FlickFetchr().fetchItems();
+            return new FlickFetchr().fetchItems();
+        }
+
+        @Override
+        protected void onPostExecute(List<GalleryItems> galleryItems) {
+            mItems=galleryItems;
+            setupAdapter();
         }
     }
 }
