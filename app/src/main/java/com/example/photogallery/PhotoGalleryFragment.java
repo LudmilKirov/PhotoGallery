@@ -7,6 +7,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -20,6 +21,9 @@ import java.util.List;
 
 public class PhotoGalleryFragment extends Fragment {
     private static final String TAG = "PhotoGalleryFragment";
+    private int mLastPosition=0;
+    private boolean mUserScrolled=true;
+
 
     private RecyclerView mPhotoRecyclerView;
     private List<GalleryItems> mItems = new ArrayList<>();
@@ -32,6 +36,7 @@ public class PhotoGalleryFragment extends Fragment {
         new FetchItemsTask().execute();
     }
 
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -41,8 +46,22 @@ public class PhotoGalleryFragment extends Fragment {
 
         mPhotoRecyclerView = (RecyclerView) v.findViewById(R.id.fragment_photo_gallery_recycler_view);
         mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
+        mPhotoRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            GridLayoutManager manager = (GridLayoutManager)mPhotoRecyclerView
+                    .getLayoutManager();
 
-        //Every time a new RecyclerView is created it is
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                mLastPosition = manager.findLastVisibleItemPosition();
+                if (!mUserScrolled) {
+                    if (mLastPosition == mItems.size() - 1) {
+                        Toast.makeText(getActivity(), "Bottom", Toast.LENGTH_SHORT).show();
+                        new FetchItemsTask().execute();
+                    }
+                }
+
+            }});
+
         // reconfigured with an appropriate adapter
         setupAdapter();
 
@@ -114,8 +133,8 @@ public class PhotoGalleryFragment extends Fragment {
 
         @Override
         protected void onPostExecute(List<GalleryItems> galleryItems) {
-            mItems=galleryItems;
+            mItems.addAll(galleryItems);
+            mUserScrolled = false;
             setupAdapter();
         }
-    }
-}
+}}
