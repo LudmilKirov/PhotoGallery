@@ -16,6 +16,22 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.os.Handler;
+
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
@@ -130,10 +146,34 @@ public class PhotoGalleryFragment extends Fragment {
         @Override
         public void onBindViewHolder(PhotoHolder photoHolder, int position) {
             GalleryItems galleryItem = mGalleryItems.get(position);
-            Drawable placeholder = getResources().getDrawable(R.drawable.ca);
-            photoHolder.bindDrawable(placeholder);
+
+            Drawable drawable;
+
+            if (mThumbnailDownloader.mLruCache.get(galleryItem.getURl()) == null) {
+                drawable = getResources().getDrawable(R.drawable.ic_launcher_background);
+            } else {
+                drawable = new BitmapDrawable(mThumbnailDownloader.mLruCache.get(galleryItem.getURl()));
+            }
+
+            photoHolder.bindDrawable(drawable);
             mThumbnailDownloader.queueThumbnail(photoHolder, galleryItem.getURl());
+            for (int i = position - 10; i < position + 10; i++) {
+                final int finalI = i;
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        if (finalI >= 0 && finalI < mGalleryItems.size()) {
+                            GalleryItems item = mGalleryItems.get(finalI);
+                            if (mThumbnailDownloader.mLruCache.get(item.getURl()) == null) {
+                                mThumbnailDownloader.preloadPhoto(item.getURl());
+                            }
+                        }
+                    }
+                };
+
+            }
         }
+
 
         @Override
         public int getItemCount() {
@@ -141,7 +181,7 @@ public class PhotoGalleryFragment extends Fragment {
         }
     }
 
-    private class FetchItemsTask extends AsyncTask<Void,Void,List<GalleryItems>> {
+    private class FetchItemsTask extends AsyncTask<Void, Void, List<GalleryItems>> {
 
         @Override
         protected List<GalleryItems> doInBackground(Void... params) {
