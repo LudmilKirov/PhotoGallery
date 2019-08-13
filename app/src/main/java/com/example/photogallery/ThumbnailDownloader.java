@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.util.Log;
+import android.util.LruCache;
 
 import com.example.photogallery.FlickFetchr;
 
@@ -16,14 +17,18 @@ import java.util.concurrent.ConcurrentMap;
 public class ThumbnailDownloader<T> extends HandlerThread {
     private static final String TAG = "ThumbnailDownloader";
     private static final int MESSAGE_DOWNLOAD = 0;
-
+    private static final int MESSAGE_PRELOAD = 1;
+    private boolean mHasQuit = false;
     private Handler mRequestHandler;
-    private ConcurrentMap<T,String> mRequestMap = new ConcurrentHashMap<>();
+    private ConcurrentMap<T, String> mRequestMap = new ConcurrentHashMap<>();
     private Handler mResponseHandler;
     private ThumbnailDownloadListener<T> mThumbnailDownloadListener;
 
+    public LruCache<String, Bitmap> mLruCache = new LruCache<>(50);
+
+
     public interface ThumbnailDownloadListener<T> {
-        void onThumbnailDownloaded(T target, Bitmap bitmap);
+        void onThumbnailDownloaded(T target, Bitmap thumbnail);
     }
 
     public void setThumbnailDownloadListener(ThumbnailDownloadListener<T> listener) {
@@ -44,14 +49,29 @@ public class ThumbnailDownloader<T> extends HandlerThread {
                     T target = (T) msg.obj;
                     Log.i(TAG, "Got a request for URL: " + mRequestMap.get(target));
                     handleRequest(target);
+                } else if (msg.what == MESSAGE_PRELOAD) {
+                    String url = (String) msg.obj;
+                    Log.i(TAG, "Preload request: " + url);
+                    try {
+                        byte[] bitmapBytes = new FlickFetchr().getUrlBytes(url);
+                        Bitmap bitmap = BitmapFactory.decodeByteArray(bitmapBytes, 0, bitmapBytes.length);
+                        mLruCache.put(url, bitmap);
+                    } catch (IOException ioe) {
+                        ioe.printStackTrace();
+                    }
                 }
             }
         };
     }
 
+    @Override
+    public boolean quit() {
+        mHasQuit = true;
+        return super.quit();
+    }
+
     public void queueThumbnail(T target, String url) {
         Log.i(TAG, "Got a URL: " + url);
-
         if (url == null) {
             mRequestMap.remove(target);
         } else {
@@ -61,8 +81,14 @@ public class ThumbnailDownloader<T> extends HandlerThread {
         }
     }
 
+    public void preloadPhoto(String url) {
+        Log.i(TAG, "Preload from URL: " + url);
+        mRequestHandler.obtainMessage(MESSAGE_PRELOAD, url).sendToTarget();
+    }
+
     public void clearQueue() {
         mRequestHandler.removeMessages(MESSAGE_DOWNLOAD);
+        mRequestMap.clear();
     }
 
     private void handleRequest(final T target) {
@@ -73,14 +99,23 @@ public class ThumbnailDownloader<T> extends HandlerThread {
                 return;
             }
 
-            byte[] bitmapBytes = new FlickFetchr().getUrlBytes(url);
-            final Bitmap bitmap = BitmapFactory
-                    .decodeByteArray(bitmapBytes, 0, bitmapBytes.length);
-            Log.i(TAG, "Bitmap created");
+            final Bitmap bitmap;
+            if (mLruCache.get(url) == null) {
+                byte[] bitmapBytes = new FlickFetchr().getUrlBytes(url);
+                bitmap = BitmapFactory
+                        .decodeByteArray(bitmapBytes, 0, bitmapBytes.length);
+                mLruCache.put(url, bitmap);
+                Log.i(TAG, "Bitmap created");
+            } else {
+                bitmap = mLruCache.get(url);
+                Log.i(TAG, "Bitmap used again");
+            }
 
             mResponseHandler.post(new Runnable() {
+                @Override
                 public void run() {
-                    if (mRequestMap.get(target) != url) {
+                    if (mRequestMap.get(target) != url ||
+                            mHasQuit) {
                         return;
                     }
 
@@ -92,4 +127,5 @@ public class ThumbnailDownloader<T> extends HandlerThread {
             Log.e(TAG, "Error downloading image", ioe);
         }
     }
+
 }
