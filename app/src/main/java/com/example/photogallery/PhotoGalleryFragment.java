@@ -1,5 +1,6 @@
 package com.example.photogallery;
 
+import android.app.DownloadManager;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
@@ -8,11 +9,16 @@ import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,7 +28,7 @@ import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
-
+import android.view.Menu;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -38,7 +44,7 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
+import android.preference.PreferenceManager;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,7 +65,8 @@ public class PhotoGalleryFragment extends Fragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
-        new FetchItemsTask().execute();
+        //This will add the items listed in your menu XML to the toolbar
+        setHasOptionsMenu(true);
 
         Handler responseHandler = new Handler();
         mThumbnailDownloader = new ThumbnailDownloader<>(responseHandler);
@@ -80,7 +87,7 @@ public class PhotoGalleryFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        View v = inflater.inflate(R.layout.fragment_photo_galley, container, false);
+        View v = inflater.inflate(R.layout.fragment_photo_gallery, container, false);
         mPhotoRecyclerView = (RecyclerView) v
                 .findViewById(R.id.fragment_photo_gallery_recycler_view);
         mPhotoRecyclerView.setLayoutManager(new GridLayoutManager(getActivity(), 3));
@@ -101,6 +108,60 @@ public class PhotoGalleryFragment extends Fragment {
         super.onDestroy();
         mThumbnailDownloader.quit();
         Log.i(TAG, "Background thread destroyed");
+    }
+
+    //Representing the Search box
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater menuInflater) {
+        super.onCreateOptionsMenu(menu, menuInflater);
+        menuInflater.inflate(R.menu.fragment_photo_gallery, menu);
+        MenuItem searchItem = menu.findItem(R.id.menu_item_search);
+        final SearchView searchView = (SearchView) searchItem.getActionView();
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            //Is executed when the user submits a query.The query
+            // the user submitted is passed as input.Returning true
+            // signifies to the system that the search request has been
+            // handled .This callback is where will lunch the
+            // FetchItemTask to query for new results.
+            @Override
+            public boolean onQueryTextSubmit(String s) {
+                Log.d(TAG, "QueryTextSubmit: " + s);
+                QueryPrefernces.setStoredQuery(getActivity(), s);
+                updateItems();
+                return true;
+            }
+
+            //Is executed any time tet in the SearchView text box changes.
+            // This means that is called every time a single character changes
+            // you will not do anything inside this callback for this
+            // app except log the input string
+            @Override
+            public boolean onQueryTextChange(String s) {
+                Log.d(TAG, "QueryTextChange: " + s);
+                return false;
+            }
+        });
+
+        searchView.setOnSearchClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+               String query = QueryPrefernces.getStoredQuery(getActivity());
+               searchView.setQuery(query, false);
+            }
+        });
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.menu_item_clear:
+                QueryPrefernces.setStoredQuery(getActivity(), null);
+                updateItems();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 
     //Look the current model state,namely the List of GalleryItems
@@ -174,7 +235,6 @@ public class PhotoGalleryFragment extends Fragment {
             }
         }
 
-
         @Override
         public int getItemCount() {
             return mGalleryItems.size();
@@ -183,9 +243,18 @@ public class PhotoGalleryFragment extends Fragment {
 
     private class FetchItemsTask extends AsyncTask<Void, Void, List<GalleryItems>> {
 
+        private String mQuery;
+        public FetchItemsTask(String query){
+            mQuery=query;
+        }
         @Override
         protected List<GalleryItems> doInBackground(Void... params) {
-            return new FlickFetchr().fetchItems();
+
+            if (mQuery == null) {
+                return new FlickFetchr().fetchRecentPhotos();
+            } else {
+                return new FlickFetchr().searchPhotos(mQuery);
+            }
         }
 
         @Override
@@ -195,5 +264,12 @@ public class PhotoGalleryFragment extends Fragment {
         }
 
     }
+
+    //Update
+    private void updateItems() {
+        String query = QueryPrefernces.getStoredQuery(getActivity());
+        new FetchItemsTask(query).execute();
+    }
+
 
 }
