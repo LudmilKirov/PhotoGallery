@@ -1,7 +1,9 @@
 package com.example.photogallery;
 
+import android.annotation.SuppressLint;
 import android.app.DownloadManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
@@ -18,6 +20,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -35,6 +38,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,7 +48,11 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import android.preference.PreferenceManager;
+
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,6 +75,7 @@ public class PhotoGalleryFragment extends Fragment {
         setRetainInstance(true);
         //This will add the items listed in your menu XML to the toolbar
         setHasOptionsMenu(true);
+        updateItems();
 
         Handler responseHandler = new Handler();
         mThumbnailDownloader = new ThumbnailDownloader<>(responseHandler);
@@ -146,10 +155,18 @@ public class PhotoGalleryFragment extends Fragment {
         searchView.setOnSearchClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-               String query = QueryPrefernces.getStoredQuery(getActivity());
-               searchView.setQuery(query, false);
+                String query = QueryPrefernces.getStoredQuery(getActivity());
+                searchView.setQuery(query, false);
             }
         });
+
+        MenuItem toogleItem = menu.findItem(R.id.menu_item_toggle_polling);
+        if(PollService.isServiceAlarmOn(getActivity())){
+            toogleItem.setTitle(R.string.stop_polling);
+        }
+        else{
+            toogleItem.setTitle(R.string.start_polling);
+        }
     }
 
     @Override
@@ -158,6 +175,11 @@ public class PhotoGalleryFragment extends Fragment {
             case R.id.menu_item_clear:
                 QueryPrefernces.setStoredQuery(getActivity(), null);
                 updateItems();
+                return true;
+            case R.id.menu_item_toggle_polling:
+                boolean shouldStartAlarm = !PollService.isServiceAlarmOn(getActivity());
+                PollService.setServiceAlarm(getActivity(),shouldStartAlarm);
+                getActivity().invalidateOptionsMenu();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -191,18 +213,22 @@ public class PhotoGalleryFragment extends Fragment {
 
     private class PhotoAdapter extends RecyclerView.Adapter<PhotoHolder> {
 
+
         private List<GalleryItems> mGalleryItems;
 
         public PhotoAdapter(List<GalleryItems> galleryItems) {
             mGalleryItems = galleryItems;
         }
 
+
         @Override
         public PhotoHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {
             LayoutInflater inflater = LayoutInflater.from(getActivity());
             View view = inflater.inflate(R.layout.gallry_item, viewGroup, false);
+
             return new PhotoHolder(view);
         }
+
 
         @Override
         public void onBindViewHolder(PhotoHolder photoHolder, int position) {
@@ -239,14 +265,17 @@ public class PhotoGalleryFragment extends Fragment {
         public int getItemCount() {
             return mGalleryItems.size();
         }
+
     }
 
     private class FetchItemsTask extends AsyncTask<Void, Void, List<GalleryItems>> {
 
         private String mQuery;
-        public FetchItemsTask(String query){
-            mQuery=query;
+
+        public FetchItemsTask(String query) {
+            mQuery = query;
         }
+
         @Override
         protected List<GalleryItems> doInBackground(Void... params) {
 
@@ -266,6 +295,7 @@ public class PhotoGalleryFragment extends Fragment {
     }
 
     //Update
+    @Deprecated
     private void updateItems() {
         String query = QueryPrefernces.getStoredQuery(getActivity());
         new FetchItemsTask(query).execute();
