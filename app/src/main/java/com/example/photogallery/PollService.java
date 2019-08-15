@@ -1,5 +1,6 @@
 package com.example.photogallery;
 
+import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.IntentService;
 import android.app.Notification;
@@ -7,6 +8,7 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.os.SystemClock;
@@ -16,12 +18,18 @@ import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
 import java.nio.channels.AlreadyBoundException;
+import java.sql.SQLTransactionRollbackException;
 import java.util.List;
 
 public class PollService extends IntentService {
     private static final String TAG = "PollService";
     //60 seconds
-    private static final  long POLL_INTERVAL = AlarmManager.INTERVAL_FIFTEEN_MINUTES;
+    private static final long POLL_INTERVAL = AlarmManager.INTERVAL_FIFTEEN_MINUTES;
+
+    public static final String ACTION_SHOW_NOTIFICATION = "com.example.photogallery.SHOW_NOTIFICATION";
+    public static final String PERM_PRIVATE = "com.example.photogallery.PRIVATE";
+    public static final String REQUEST_CODE = "REQUEST_CODE";
+    public static final String NOTIFICATION = "NOTIFICATION";
 
     //SetInexactRepeating takes four parameters: a constant to
     // describe the time basis for the alarm,the time at which
@@ -42,6 +50,8 @@ public class PollService extends IntentService {
             alarmManager.cancel(pi);
             pi.cancel();
         }
+
+        QueryPrefernces.setAlarmOn(context, isOn);
     }
 
     public static Intent newIntent(Context context) {
@@ -76,9 +86,9 @@ public class PollService extends IntentService {
         } else {
             Log.i(TAG, "Got a new result: " + resultId);
 
-            Resources resource= getResources();
+            Resources resource = getResources();
             Intent i = MainActivity.newIntent(this);
-            PendingIntent pi = PendingIntent.getActivity(this,0,i,0);
+            PendingIntent pi = PendingIntent.getActivity(this, 0, i, 0);
 
             Notification notification = new NotificationCompat.Builder(this)
                     .setTicker(resource.getString(R.string.new_picture_title))
@@ -88,9 +98,9 @@ public class PollService extends IntentService {
                     .setContentIntent(pi)
                     .setAutoCancel(true)
                     .build();
-            NotificationManagerCompat notificationManagerCompat =
-                    NotificationManagerCompat.from(this);
-            notificationManagerCompat.notify(0,notification);
+
+
+            showBackgroundNotification(0, notification);
 
         }
 
@@ -120,12 +130,22 @@ public class PollService extends IntentService {
         return isNetworkConnected;
     }
 
-    public static boolean isServiceAlarmOn(Context context){
+    public static boolean isServiceAlarmOn(Context context) {
         Intent i = PollService.newIntent(context);
         PendingIntent pi = PendingIntent
-                .getService(context,0,i,PendingIntent.FLAG_NO_CREATE);
+                .getService(context, 0, i, PendingIntent.FLAG_NO_CREATE);
 
         //Null PendingIntent means that alarm is not set
         return pi != null;
+    }
+
+    private void showBackgroundNotification(int requestCode, Notification notification) {
+        Intent i = new Intent(ACTION_SHOW_NOTIFICATION);
+        i.putExtra(REQUEST_CODE, requestCode);
+        i.putExtra(NOTIFICATION, notification);
+        //Parameters a :result receiver,a Handler to run the result receiver on,and then initial
+        // values for the result code,result data,and result extras for the ordered broadcast
+        sendOrderedBroadcast(i, PERM_PRIVATE, null, null,
+                Activity.RESULT_OK, null, null);
     }
 }
