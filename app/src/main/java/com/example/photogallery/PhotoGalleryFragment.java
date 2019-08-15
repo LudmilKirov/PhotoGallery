@@ -161,10 +161,9 @@ public class PhotoGalleryFragment extends VisibleFragment {
         });
 
         MenuItem toogleItem = menu.findItem(R.id.menu_item_toggle_polling);
-        if(PollService.isServiceAlarmOn(getActivity())){
+        if (PollService.isServiceAlarmOn(getActivity())) {
             toogleItem.setTitle(R.string.stop_polling);
-        }
-        else{
+        } else {
             toogleItem.setTitle(R.string.start_polling);
         }
     }
@@ -178,7 +177,7 @@ public class PhotoGalleryFragment extends VisibleFragment {
                 return true;
             case R.id.menu_item_toggle_polling:
                 boolean shouldStartAlarm = !PollService.isServiceAlarmOn(getActivity());
-                PollService.setServiceAlarm(getActivity(),shouldStartAlarm);
+                PollService.setServiceAlarm(getActivity(), shouldStartAlarm);
                 getActivity().invalidateOptionsMenu();
                 return true;
             default:
@@ -196,18 +195,32 @@ public class PhotoGalleryFragment extends VisibleFragment {
         }
     }
 
-    private class PhotoHolder extends RecyclerView.ViewHolder {
+
+    private class PhotoHolder extends RecyclerView.ViewHolder
+            implements View.OnClickListener {
         private ImageView mItemImageView;
+        private GalleryItems mGalleryItem;
 
         public PhotoHolder(View itemView) {
             super(itemView);
 
             mItemImageView = (ImageView) itemView
                     .findViewById(R.id.fragment_photo_gallery_image_view);
+            itemView.setOnClickListener(this);
+        }
+
+        public void bindGalleryItem(GalleryItems galleryItem){
+            mGalleryItem=galleryItem;
         }
 
         public void bindDrawable(Drawable drawable) {
             mItemImageView.setImageDrawable(drawable);
+        }
+
+        @Override
+        public void onClick(View view) {
+            Intent i = new Intent(Intent.ACTION_VIEW,mGalleryItem.getPhotoPageUri());
+            startActivity(i);
         }
     }
 
@@ -233,7 +246,7 @@ public class PhotoGalleryFragment extends VisibleFragment {
         @Override
         public void onBindViewHolder(PhotoHolder photoHolder, int position) {
             GalleryItems galleryItem = mGalleryItems.get(position);
-
+            photoHolder.bindGalleryItem(galleryItem);
             Drawable drawable;
 
             if (mThumbnailDownloader.mLruCache.get(galleryItem.getURl()) == null) {
