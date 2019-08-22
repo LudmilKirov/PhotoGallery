@@ -9,7 +9,6 @@ import android.util.Log;
 
 import androidx.core.app.NotificationManagerCompat;
 
-
 public class NotificationReceiver extends BroadcastReceiver {
     private static final String TAG = "NotificationReceiver";
 
@@ -24,10 +23,8 @@ public class NotificationReceiver extends BroadcastReceiver {
         int requestCode = intent.getIntExtra(PollService.REQUEST_CODE, 0);
         Notification notification = (Notification)
                 intent.getParcelableExtra(PollService.NOTIFICATION);
-
         NotificationManagerCompat notificationManagerCompat =
                 NotificationManagerCompat.from(context);
         notificationManagerCompat.notify(requestCode, notification);
-
     }
 }

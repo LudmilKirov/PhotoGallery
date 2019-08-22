@@ -35,8 +35,8 @@ public class GalleryItems {
     }
 
     @Override
-    public String toString(){
-       return mCaption;
+    public String toString() {
+        return mCaption;
     }
 
     public String getOwner() {
@@ -48,7 +48,7 @@ public class GalleryItems {
     }
 
     //Generete photo page URL
-    public Uri getPhotoPageUri(){
+    public Uri getPhotoPageUri() {
         return Uri.parse("http://www.flickr.com/photos/")
                 .buildUpon()
                 .appendPath(mOwner)

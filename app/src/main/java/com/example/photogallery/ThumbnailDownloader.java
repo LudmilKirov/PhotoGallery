@@ -18,7 +18,7 @@ public class ThumbnailDownloader<T> extends HandlerThread {
     private static final String TAG = "ThumbnailDownloader";
     private static final int MESSAGE_DOWNLOAD = 0;
     private static final int MESSAGE_PRELOAD = 1;
-    private boolean mHasQuit = false;
+
     private Handler mRequestHandler;
     private ConcurrentMap<T, String> mRequestMap = new ConcurrentHashMap<>();
     private Handler mResponseHandler;
@@ -26,6 +26,7 @@ public class ThumbnailDownloader<T> extends HandlerThread {
 
     public LruCache<String, Bitmap> mLruCache = new LruCache<>(50);
 
+    private boolean mHasQuit = false;
 
     public interface ThumbnailDownloadListener<T> {
         void onThumbnailDownloaded(T target, Bitmap thumbnail);
@@ -100,6 +101,7 @@ public class ThumbnailDownloader<T> extends HandlerThread {
             }
 
             final Bitmap bitmap;
+
             if (mLruCache.get(url) == null) {
                 byte[] bitmapBytes = new FlickFetchr().getUrlBytes(url);
                 bitmap = BitmapFactory
@@ -118,7 +120,6 @@ public class ThumbnailDownloader<T> extends HandlerThread {
                             mHasQuit) {
                         return;
                     }
-
                     mRequestMap.remove(target);
                     mThumbnailDownloadListener.onThumbnailDownloaded(target, bitmap);
                 }
@@ -127,5 +128,4 @@ public class ThumbnailDownloader<T> extends HandlerThread {
             Log.e(TAG, "Error downloading image", ioe);
         }
     }
-
 }

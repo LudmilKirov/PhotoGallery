@@ -209,8 +209,8 @@ public class PhotoGalleryFragment extends VisibleFragment {
             itemView.setOnClickListener(this);
         }
 
-        public void bindGalleryItem(GalleryItems galleryItem){
-            mGalleryItem=galleryItem;
+        public void bindGalleryItem(GalleryItems galleryItem) {
+            mGalleryItem = galleryItem;
         }
 
         public void bindDrawable(Drawable drawable) {
@@ -220,29 +220,24 @@ public class PhotoGalleryFragment extends VisibleFragment {
         @Override
         public void onClick(View view) {
             Intent i = PhotoPageActivity
-                    .newIntent(getActivity(),mGalleryItem.getPhotoPageUri());
+                    .newIntent(getActivity(), mGalleryItem.getPhotoPageUri());
             startActivity(i);
         }
     }
 
     private class PhotoAdapter extends RecyclerView.Adapter<PhotoHolder> {
-
-
         private List<GalleryItems> mGalleryItems;
 
         public PhotoAdapter(List<GalleryItems> galleryItems) {
             mGalleryItems = galleryItems;
         }
 
-
         @Override
         public PhotoHolder onCreateViewHolder(ViewGroup viewGroup, int viewType) {
             LayoutInflater inflater = LayoutInflater.from(getActivity());
             View view = inflater.inflate(R.layout.gallry_item, viewGroup, false);
-
             return new PhotoHolder(view);
         }
-
 
         @Override
         public void onBindViewHolder(PhotoHolder photoHolder, int position) {
@@ -271,7 +266,6 @@ public class PhotoGalleryFragment extends VisibleFragment {
                         }
                     }
                 };
-
             }
         }
 
@@ -279,11 +273,9 @@ public class PhotoGalleryFragment extends VisibleFragment {
         public int getItemCount() {
             return mGalleryItems.size();
         }
-
     }
 
     private class FetchItemsTask extends AsyncTask<Void, Void, List<GalleryItems>> {
-
         private String mQuery;
 
         public FetchItemsTask(String query) {
@@ -305,7 +297,6 @@ public class PhotoGalleryFragment extends VisibleFragment {
             mItems = items;
             setupAdapter();
         }
-
     }
 
     //Update
@@ -314,6 +305,4 @@ public class PhotoGalleryFragment extends VisibleFragment {
         String query = QueryPrefernces.getStoredQuery(getActivity());
         new FetchItemsTask(query).execute();
     }
-
-
 }

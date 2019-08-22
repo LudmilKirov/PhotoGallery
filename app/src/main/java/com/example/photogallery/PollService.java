@@ -99,13 +99,9 @@ public class PollService extends IntentService {
                     .setAutoCancel(true)
                     .build();
 
-
             showBackgroundNotification(0, notification);
-
         }
-
         QueryPrefernces.setLastResultId(this, resultId);
-
     }
 
     //Toggling the background data setting to disallow downloading

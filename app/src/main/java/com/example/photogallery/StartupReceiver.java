@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.util.Log;
 
 public class StartupReceiver extends BroadcastReceiver {
-
     private static final String TAG = "StartupReceiver";
 
     @Override
@@ -14,7 +13,6 @@ public class StartupReceiver extends BroadcastReceiver {
         Log.i(TAG, "Received broadcast intent: " + intent.getAction());
 
         boolean isOn = QueryPrefernces.isAlarmOn(context);
-        PollService.setServiceAlarm(context,isOn);
-
+        PollService.setServiceAlarm(context, isOn);
     }
 }
