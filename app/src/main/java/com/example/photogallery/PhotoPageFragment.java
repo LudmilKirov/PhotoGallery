@@ -33,7 +33,6 @@ public class PhotoPageFragment extends VisibleFragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         mUri = getArguments().getParcelable(ARG_URI);
     }
 
@@ -43,8 +42,8 @@ public class PhotoPageFragment extends VisibleFragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_photo_page, container, false);
 
-        mProgressBar=
-                (ProgressBar)v.findViewById(R.id.fragment_photo_page_progress_bar);
+        mProgressBar =
+                (ProgressBar) v.findViewById(R.id.fragment_photo_page_progress_bar);
         //WebChromeCLient report in range 0-100
         mProgressBar.setMax(100);
 
@@ -53,24 +52,24 @@ public class PhotoPageFragment extends VisibleFragment {
         // instance of WebSettings and calling setJAvaScripEnabled.
         mWebView.getSettings().setJavaScriptEnabled(true);
         mWebView.setWebViewClient(new WebViewClient() {
-            public void onProgressChanged(WebView webView,int newProgress){
-                if(newProgress==100){
+            public void onProgressChanged(WebView webView, int newProgress) {
+                if (newProgress == 100) {
                     mProgressBar.setVisibility(View.GONE);
-                }
-                else{
+                } else {
                     mProgressBar.setVisibility(View.VISIBLE);
                     mProgressBar.setProgress(newProgress);
                 }
             }
-            public void onReceivedTitle(WebView webView,String title){
+
+            public void onReceivedTitle(WebView webView, String title) {
                 AppCompatActivity activity = (AppCompatActivity) getActivity();
                 activity.getSupportActionBar().setSubtitle(title);
             }
         });
-        mWebView.setWebViewClient(new WebViewClient(){
-          public boolean shouldOverrideUrlLoading(WebView view,String url){
-              return false;
-          }
+        mWebView.setWebViewClient(new WebViewClient() {
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                return false;
+            }
         });
         mWebView.loadUrl(mUri.toString());
 

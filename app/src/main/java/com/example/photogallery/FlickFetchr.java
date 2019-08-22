@@ -49,17 +49,16 @@ public class FlickFetchr {
     // In the following line you need to put your
     // API key in the place of yourApiKeyHere String
     private static final String API_KEY = "2b6cecd8716c5bd9223472062dbe3980";
-    private static final String FETCH_RECENT_METHOD="flickr.photos.getRecent";
+    private static final String FETCH_RECENT_METHOD = "flickr.photos.getRecent";
     private static final String SEARCH_METHOD = "flickr.photos.search";
     private static final Uri ENDPOINT = Uri
             .parse("https://api.flickr.com/services/rest/")
             .buildUpon()
-            .appendQueryParameter("api_key",API_KEY)
-            .appendQueryParameter("format","json")
-            .appendQueryParameter("nojsoncallback","1")
-            .appendQueryParameter("extras","url_s")
+            .appendQueryParameter("api_key", API_KEY)
+            .appendQueryParameter("format", "json")
+            .appendQueryParameter("nojsoncallback", "1")
+            .appendQueryParameter("extras", "url_s")
             .build();
-
 
     public byte[] getUrlBytes(String urlSpec) throws IOException {
         URL url = new URL(urlSpec);
@@ -101,7 +100,6 @@ public class FlickFetchr {
         } catch (JSONException je) {
             Log.e(TAG, "Failed to parse JSON", je);
         }
-
         return items;
     }
 
@@ -109,6 +107,7 @@ public class FlickFetchr {
             throws IOException, JSONException {
         JSONObject photosJsonObject = jsonBody.getJSONObject("photos");
         JSONArray photoJsonArray = photosJsonObject.getJSONArray("photo");
+
         for (int i = 0; i < photoJsonArray.length(); i++) {
             JSONObject photoJsonObject = photoJsonArray.getJSONObject(i);
             GalleryItems item = new GalleryItems();
@@ -124,23 +123,22 @@ public class FlickFetchr {
         }
     }
 
-    private String buildUrl(String method,String query){
+    private String buildUrl(String method, String query) {
         Uri.Builder uriBuilder = ENDPOINT.buildUpon()
-                .appendQueryParameter("method",method);
-        if(method.equals(SEARCH_METHOD)){
-            uriBuilder.appendQueryParameter("text",query);
+                .appendQueryParameter("method", method);
+        if (method.equals(SEARCH_METHOD)) {
+            uriBuilder.appendQueryParameter("text", query);
         }
-
         return uriBuilder.build().toString();
     }
 
-    public List<GalleryItems> fetchRecentPhotos(){
-        String url = buildUrl(FETCH_RECENT_METHOD,null);
+    public List<GalleryItems> fetchRecentPhotos() {
+        String url = buildUrl(FETCH_RECENT_METHOD, null);
         return downloadGalleyItems(url);
     }
 
-    public List<GalleryItems> searchPhotos(String query){
-        String url = buildUrl(SEARCH_METHOD,query);
+    public List<GalleryItems> searchPhotos(String query) {
+        String url = buildUrl(SEARCH_METHOD, query);
         return downloadGalleyItems(url);
     }
 }

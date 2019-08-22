@@ -30,8 +30,8 @@ public abstract class VisibleFragment extends Fragment {
     private BroadcastReceiver mOnShowNotification = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-         //If we receive this,it is visible,so cancel the notification
-            Log.i(TAG,"canceling notification");
+            //If we receive this,it is visible,so cancel the notification
+            Log.i(TAG, "canceling notification");
             setResultCode(Activity.RESULT_CANCELED);
         }
     };
